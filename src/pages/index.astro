@@ -5,8 +5,8 @@
 // attempts to authenticate the user with our backend API.
 
 // Define a type for the user data we expect from the API.
-// This interface is used for type-checking within the Astro component's frontmatter,
-// but client-side JavaScript doesn't directly use type annotations.
+// This interface is used for type-checking within the Astro component's frontmatter.
+// Client-side JavaScript within <script is:inline> tags does not use type annotations directly.
 interface UserData {
   telegram_id: number;
   username?: string | null;
@@ -89,7 +89,8 @@ interface UserData {
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <script type="module">
+    <!-- THIS IS THE CORRECTION: Added `is:inline defer` attributes -->
+    <script is:inline defer>
       // This script runs on the client-side, in the user's browser (inside Telegram)
       import WebApp from '@twa-dev/sdk'; // Import the Telegram WebApp SDK
 
@@ -156,7 +157,7 @@ interface UserData {
 
           if (response.ok) {
             // Authentication successful (user logged in or signed up).
-            const user = data.user; // <-- NO TYPE ANNOTATION HERE
+            const user = data.user; // No type annotation needed in client-side JS
             console.log('Authentication successful:', user);
             showStatus('Authenticated!');
 
