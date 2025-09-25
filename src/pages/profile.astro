@@ -5,7 +5,6 @@
 
 // Define a type for the user data we expect from the API.
 // This interface is used for type-checking within the Astro component's frontmatter.
-// Client-side JavaScript within <script is:inline> tags does not use type annotations directly.
 interface UserData {
   telegram_id: number;
   username?: string | null;
@@ -106,8 +105,8 @@ interface UserData {
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- THIS IS THE CORRECTION: Added `is:inline defer` attributes -->
-    <script is:inline defer>
+    <!-- THIS IS THE CORRECTION: Changed to `type="module" client:load` -->
+    <script type="module" client:load>
       import WebApp from '@twa-dev/sdk'; // Import the Telegram WebApp SDK
 
       // Get references to our HTML elements
