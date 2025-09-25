@@ -1,7 +1,7 @@
 ---
 // src/pages/profile.astro
-// This is the Profile page of our Mini App, now importing its client-side logic
-// from a dedicated TypeScript file, with Astro handling the bundling.
+// This is the Profile page of our Mini App, now with correctly configured
+// client-side script loading.
 
 // Define a type for the user data we expect from the API.
 interface UserData {
@@ -11,11 +11,6 @@ interface UserData {
   last_name?: string | null;
   photo_url?: string | null;
 }
-
-// THIS IS THE CORRECTION FOR CLIENT-SIDE SCRIPT INJECTION
-// We import the script here in the frontmatter, and Astro's build system
-// will handle bundling it and injecting the correct <script> tag with the right path.
-import '../scripts/profile.ts';
 ---
 
 <!doctype html>
@@ -109,6 +104,8 @@ import '../scripts/profile.ts';
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- REMOVED: No <script> tag here; Astro handles it from the frontmatter import. -->
+    <!-- THIS IS THE CORRECTION: Added `type="module"` and `client:load` -->
+    <!-- Astro will bundle and correctly reference this script only on the client. -->
+    <script type="module" src="../scripts/profile.ts" client:load></script>
   </body>
 </html>

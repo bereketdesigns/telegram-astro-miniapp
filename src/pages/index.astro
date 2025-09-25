@@ -1,7 +1,8 @@
 ---
 // src/pages/index.astro
 // This is the Home page of our Telegram Mini App.
-// We are now telling Astro to correctly bundle and inject the client-side script.
+// Client-side scripts are now correctly configured to be processed by Astro's bundler
+// and only execute on the client-side.
 
 // Define a type for the user data we expect from the API.
 interface UserData {
@@ -11,11 +12,6 @@ interface UserData {
   last_name?: string | null;
   photo_url?: string | null;
 }
-
-// THIS IS THE CORRECTION FOR CLIENT-SIDE SCRIPT INJECTION
-// We import the script here in the frontmatter, and Astro's build system
-// will handle bundling it and injecting the correct <script> tag with the right path.
-import '../scripts/home.ts';
 ---
 
 <!doctype html>
@@ -91,6 +87,8 @@ import '../scripts/home.ts';
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- REMOVED: No <script> tag here; Astro handles it from the frontmatter import. -->
+    <!-- THIS IS THE CORRECTION: Added `type="module"` and `client:load` -->
+    <!-- Astro will bundle and correctly reference this script only on the client. -->
+    <script type="module" src="../scripts/home.ts" client:load></script>
   </body>
 </html>
