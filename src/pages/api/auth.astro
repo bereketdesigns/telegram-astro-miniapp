@@ -1,0 +1,112 @@
+---
+// src/pages/api/auth.astro
+// This API endpoint handles Telegram `initData` verification,
+// user login/signup, and sets the session cookie upon successful authentication.
+
+import type { APIRoute } from 'astro'; // Import APIRoute type for strong type checking of our API route.
+import { sql } from '../../lib/db'; // Our database client from src/lib/db.ts.
+import {
+  verifyTelegramInitData, // Function to verify Telegram's `initData`.
+  createSessionToken,     // Function to create our JWT session token.
+  setSessionCookie,       // Function to set the session cookie in the HTTP response.
+  type UserSession        // Type definition for our user session data.
+} from '../../lib/auth'; // Auth helper functions from src/lib/auth.ts.
+
+// This is a POST request handler because the frontend will send `initData` in the request body.
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    // 1. Parse the request body to get the `initData` string.
+    const { initData } = await request.json();
+
+    // 2. Verify Telegram `initData` for authenticity.
+    // If initData is missing or verification fails, it's a security risk, so we return an error.
+    if (!initData || !verifyTelegramInitData(initData)) {
+      console.warn('Invalid or missing initData received.');
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid initData' }), {
+        status: 403, // Forbidden status code.
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 3. Extract user information from the verified `initData`.
+    const params = new URLSearchParams(initData);
+    const userParam = params.get('user'); // The 'user' parameter contains a JSON string of user data.
+
+    if (!userParam) {
+      console.warn('initData does not contain user information.');
+      return new Response(JSON.stringify({ error: 'Bad Request: User data not found in initData' }), {
+        status: 400, // Bad Request status code.
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const telegramUser = JSON.parse(userParam); // Parse the user JSON string into an object.
+    console.log('Telegram User Data:', telegramUser);
+
+    // 4. Check if the user already exists in our database.
+    let userRecord: UserSession | null = null;
+    const { rows } = await sql`
+      SELECT telegram_id, username, first_name, last_name, photo_url
+      FROM users
+      WHERE telegram_id = ${telegramUser.id}
+    `;
+
+    if (rows.length > 0) {
+      // User found: retrieve their existing data.
+      userRecord = rows[0] as UserSession;
+      console.log(`User ${telegramUser.id} (${userRecord.username || userRecord.first_name}) found in DB.`);
+    } else {
+      // User not found: create a new user record in the database.
+      console.log(`User ${telegramUser.id} not found. Creating new user...`);
+      const { rows: newRows } = await sql`
+        INSERT INTO users (telegram_id, username, first_name, last_name, photo_url)
+        VALUES (
+          ${telegramUser.id},
+          ${telegramUser.username || null},     -- Use null if username is not provided by Telegram.
+          ${telegramUser.first_name || null},   -- Use null if first_name is not provided.
+          ${telegramUser.last_name || null},    -- Use null if last_name is not provided.
+          ${telegramUser.photo_url || null}     -- Use null if photo_url is not provided.
+        )
+        RETURNING telegram_id, username, first_name, last_name, photo_url; -- Return the newly inserted data.
+      `;
+      userRecord = newRows[0] as UserSession;
+      console.log(`New user ${telegramUser.id} created successfully.`);
+    }
+
+    // Ensure we have a user record before proceeding.
+    if (!userRecord) {
+      throw new Error("Authentication failed: Could not retrieve or create user record.");
+    }
+
+    // 5. Create a secure session token (JWT) for the authenticated user.
+    const sessionToken = await createSessionToken(userRecord);
+
+    // 6. Prepare the successful response.
+    const response = new Response(JSON.stringify({
+      message: 'Authentication successful',
+      user: {
+        telegram_id: userRecord.telegram_id,
+        username: userRecord.username,
+        first_name: userRecord.first_name,
+        last_name: userRecord.last_name,
+        photo_url: userRecord.photo_url,
+      },
+    }), {
+      status: 200, // OK status code.
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    // 7. Set the session cookie in the response headers. This logs the user in.
+    setSessionCookie(response, sessionToken);
+
+    return response; // Send the response back to the frontend.
+
+  } catch (error) {
+    // Handle any unexpected errors during the authentication process.
+    console.error('Authentication API error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error during authentication' }), {
+      status: 500, // Internal Server Error status code.
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};

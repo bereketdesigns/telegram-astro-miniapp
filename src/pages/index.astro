@@ -1,16 +1,199 @@
 ---
+// src/pages/index.astro
+// This is the Home page of our Telegram Mini App.
+// It loads the Telegram WebApp SDK, retrieves initData, and
+// attempts to authenticate the user with our backend API.
 
+// Define a type for the user data we expect from the API.
+// This interface is used for type-checking within the Astro component's frontmatter,
+// but client-side JavaScript doesn't directly use type annotations.
+interface UserData {
+  telegram_id: number;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  photo_url?: string | null;
+}
 ---
 
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Telegram Mini App Home</title>
+    <style>
+      /* Basic styling for the Mini App, using Telegram's theme colors where available */
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background-color: var(--tg-theme-bg-color, #ffffff); /* Fallback to white */
+        color: var(--tg-theme-text-color, #000000); /* Fallback to black */
+        transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transitions */
+      }
+      .container {
+        text-align: center;
+        padding: 20px;
+        background-color: var(--tg-theme-secondary-bg-color, #f0f0f0); /* Fallback to light grey */
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: var(--tg-theme-text-color, #000000);
+      }
+      button {
+        background-color: var(--tg-theme-button-color, #007bff); /* Fallback to blue */
+        color: var(--tg-theme-button-text-color, #ffffff); /* Fallback to white */
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+        margin-top: 20px;
+        transition: background-color 0.3s ease, opacity 0.3s ease;
+      }
+      button:hover {
+        opacity: 0.9;
+      }
+      .loader {
+        border: 4px solid var(--tg-theme-hint-color, #f3f3f3); /* Loader base color */
+        border-top: 4px solid var(--tg-theme-link-color, #3498db); /* Loader spin color */
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 2s linear infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Welcome to the Mini App!</h1>
+      <div id="status">Loading...</div>
+      <div id="loader" class="loader"></div>
+      <div id="user-info" style="display: none;">
+        <p>Welcome, <strong id="username-display"></strong>!</p>
+        <a href="/profile">
+          <button>Go to Profile</button>
+        </a>
+      </div>
+      <div id="error-message" style="color: red; display: none;"></div>
+    </div>
+
+    <script type="module">
+      // This script runs on the client-side, in the user's browser (inside Telegram)
+      import WebApp from '@twa-dev/sdk'; // Import the Telegram WebApp SDK
+
+      // Get references to our HTML elements
+      const statusElement = document.getElementById('status');
+      const loaderElement = document.getElementById('loader');
+      const userInfoElement = document.getElementById('user-info');
+      const usernameDisplayElement = document.getElementById('username-display');
+      const errorMessageElement = document.getElementById('error-message');
+
+      // Helper function to display messages
+      function showStatus(message, isError = false) {
+        statusElement.textContent = message;
+        if (isError) {
+          statusElement.style.color = 'red';
+        } else {
+          statusElement.style.color = 'inherit'; // Reset color if not an error
+        }
+      }
+
+      // Initialize the Telegram WebApp SDK. This makes Telegram-specific features available.
+      WebApp.ready();
+
+      // Apply Telegram's theme parameters to our page for a native look and feel.
+      if (WebApp.themeParams) {
+        // Set CSS variables that our <style> block can use
+        document.documentElement.style.setProperty('--tg-theme-bg-color', WebApp.themeParams.bg_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-text-color', WebApp.themeParams.text_color || '#000000');
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', WebApp.themeParams.secondary_bg_color || '#f0f0f0');
+        document.documentElement.style.setProperty('--tg-theme-button-color', WebApp.themeParams.button_color || '#007bff');
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', WebApp.themeParams.button_text_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-link-color', WebApp.themeParams.link_color || '#3498db');
+        document.documentElement.style.setProperty('--tg-theme-hint-color', WebApp.themeParams.hint_color || '#808080');
+      }
+      // Optionally, set the Telegram background for the app
+      WebApp.setBackgroundColor(WebApp.themeParams.secondary_bg_color || '#f0f0f0');
+
+      async function authenticateUser() {
+        try {
+          // Get the `initData` from the Telegram WebApp SDK.
+          // This `initData` contains user information and is cryptographically signed by Telegram.
+          const initData = WebApp.initData;
+
+          if (!initData) {
+            // If initData is not available, it means the app isn't opened from Telegram.
+            showStatus('Telegram initData not available. Please open the app from Telegram.', true);
+            loaderElement.style.display = 'none';
+            return;
+          }
+
+          showStatus('Authenticating...');
+
+          // Call our backend API endpoint to authenticate the user.
+          // We send the `initData` received from Telegram.
+          const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ initData }), // Send the initData in the request body.
+          });
+
+          const data = await response.json(); // Parse the JSON response from our API.
+
+          if (response.ok) {
+            // Authentication successful (user logged in or signed up).
+            const user = data.user; // <-- NO TYPE ANNOTATION HERE
+            console.log('Authentication successful:', user);
+            showStatus('Authenticated!');
+
+            // Display the user's name or a generic welcome.
+            usernameDisplayElement.textContent = user.username || user.first_name || 'Guest';
+            userInfoElement.style.display = 'block'; // Show user info and profile link.
+
+            // If Telegram MainButton is available, use it to navigate to profile.
+            if (WebApp.MainButton) {
+              WebApp.MainButton.setText('Go to Profile');
+              WebApp.MainButton.onClick(() => window.location.href = '/profile'); // Attach click handler
+              WebApp.MainButton.show(); // Make the button visible.
+              WebApp.MainButton.enable(); // Ensure it's clickable.
+            }
+
+          } else {
+            // Authentication failed (e.g., invalid initData, server error).
+            showStatus(`Authentication failed: ${data.error || 'Unknown error'}`, true);
+            errorMessageElement.textContent = data.error || 'Failed to authenticate.';
+            errorMessageElement.style.display = 'block';
+            console.error('Authentication error:', data);
+            WebApp.showAlert(`Authentication Failed: ${data.error || 'Unknown error'}`); // Show a Telegram alert
+          }
+        } catch (error) {
+          // Catch any network errors or unhandled exceptions.
+          showStatus('An error occurred during authentication.', true);
+          errorMessageElement.textContent = `Error: ${error.message}`;
+          errorMessageElement.style.display = 'block';
+          console.error('Fetch error:', error);
+          WebApp.showAlert(`Error: ${error.message}`); // Show a Telegram alert
+        } finally {
+          loaderElement.style.display = 'none'; // Always hide the loader when the process finishes.
+        }
+      }
+
+      // Execute the authentication function when the page loads.
+      authenticateUser();
+    </script>
+  </body>
 </html>

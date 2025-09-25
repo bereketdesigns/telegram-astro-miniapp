@@ -1,0 +1,94 @@
+---
+// src/pages/api/user.astro
+// This API endpoint handles fetching logged-in user data and logging out.
+
+import type { APIRoute } from 'astro'; // Import APIRoute for type safety.
+import {
+  verifySessionToken,         // Function to verify the JWT session token.
+  getSessionTokenFromRequest, // Function to extract the session token from incoming cookies.
+  clearSessionCookie          // Function to clear the session cookie (for logout).
+} from '../../lib/auth'; // Auth helper functions.
+
+// --- GET Request Handler: Fetch Logged-In User Data ---
+export const GET: APIRoute = async ({ request }) => {
+  try {
+    // 1. Get the session token from the incoming request's cookies.
+    const token = getSessionTokenFromRequest(request);
+
+    if (!token) {
+      console.warn('Unauthorized: No session token found in request for /api/user.');
+      // If no token, return an unauthorized response. We also clear any stale cookie
+      // to ensure a clean state if a partially set/invalid cookie was somehow present.
+      const response = new Response(JSON.stringify({ error: 'Unauthorized: No session token' }), {
+        status: 401, // Unauthorized status.
+        headers: { 'Content-Type': 'application/json' },
+      });
+      clearSessionCookie(response); // Clear any potentially bad cookie.
+      return response;
+    }
+
+    // 2. Verify the session token. This checks its signature and expiration.
+    const userSession = await verifySessionToken(token);
+
+    if (!userSession) {
+      console.warn('Unauthorized: Invalid or expired session token for /api/user.');
+      // If token is invalid/expired, return unauthorized and explicitly clear the cookie.
+      const response = new Response(JSON.stringify({ error: 'Unauthorized: Invalid or expired session' }), {
+        status: 401, // Unauthorized status.
+        headers: { 'Content-Type': 'application/json' },
+      });
+      clearSessionCookie(response); // Clear the invalid session cookie.
+      return response;
+    }
+
+    // 3. If the token is valid, return the user data from the session.
+    return new Response(JSON.stringify({
+      user: {
+        telegram_id: userSession.telegram_id,
+        username: userSession.username,
+        first_name: userSession.first_name,
+        last_name: userSession.last_name,
+        photo_url: userSession.photo_url,
+      },
+    }), {
+      status: 200, // OK status.
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('API /api/user (GET) error:', error);
+    // In case of any unexpected server error, return 500.
+    // Also, clear the cookie for safety, as the session state might be compromised.
+    const response = new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    clearSessionCookie(response);
+    return response;
+  }
+};
+
+// --- POST Request Handler: Logout ---
+// We'll use a POST request to /api/user/logout to clear the session.
+// Astro's API routes can handle different methods and sub-paths within a single file.
+export const POST: APIRoute = async ({ request }) => {
+  // Check if the request path indicates a logout action.
+  // `request.url` will be something like `https://your-app.com/api/user` or `https://your-app.com/api/user/logout`.
+  // We explicitly check for '/api/user/logout' to differentiate it.
+  if (request.url.endsWith('/api/user/logout')) {
+    console.log('Logout request received.');
+    const response = new Response(JSON.stringify({ message: 'Logged out successfully' }), {
+      status: 200, // OK status.
+      headers: { 'Content-Type': 'application/json' },
+    });
+    clearSessionCookie(response); // Clear the session cookie. This is the core logout action.
+    return response;
+  }
+
+  // If it's a POST request to /api/user (without /logout), or any other unexpected POST,
+  // return a Method Not Allowed error.
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+    status: 405, // Method Not Allowed status.
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
