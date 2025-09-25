@@ -49,7 +49,7 @@ async function fetchUserProfile() {
 
       if (profilePhotoElement) {
         if (user.photo_url) {
-          (profilePhotoElement as HTMLImageElement).src = user.photo_url; // Cast to HTMLImageElement
+          (profilePhotoElement as HTMLImageElement).src = user.photo_url;
           profilePhotoElement.style.display = 'block';
         } else {
           profilePhotoElement.style.display = 'none';
@@ -115,6 +115,13 @@ async function logoutUser(showConfirmation = true) {
   }
 }
 
-if (logoutButton) logoutButton.addEventListener('click', () => logoutUser());
+// THIS IS THE FINAL CORRECTION FOR THE TYPESCRIPT VOID ERROR:
+// We explicitly add `void` before `logoutUser()` to tell TypeScript to ignore the promise's return value.
+if (logoutButton) {
+  logoutButton.addEventListener('click', () => { // Keep this as a regular function
+    void logoutUser(); // <-- Add `void` here
+  });
+}
+
 
 fetchUserProfile();

@@ -1,7 +1,7 @@
 ---
 // src/pages/index.astro
 // This is the Home page of our Telegram Mini App.
-// It now imports its client-side logic from a dedicated TypeScript file.
+// We are now telling Astro to correctly bundle and inject the client-side script.
 
 // Define a type for the user data we expect from the API.
 interface UserData {
@@ -11,6 +11,11 @@ interface UserData {
   last_name?: string | null;
   photo_url?: string | null;
 }
+
+// THIS IS THE CORRECTION FOR CLIENT-SIDE SCRIPT INJECTION
+// We import the script here in the frontmatter, and Astro's build system
+// will handle bundling it and injecting the correct <script> tag with the right path.
+import '../scripts/home.ts';
 ---
 
 <!doctype html>
@@ -86,7 +91,6 @@ interface UserData {
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- THIS IS THE CORRECTION: Referencing the external script file -->
-    <script type="module" src="/src/scripts/home.ts"></script>
+    <!-- REMOVED: No <script> tag here; Astro handles it from the frontmatter import. -->
   </body>
 </html>
