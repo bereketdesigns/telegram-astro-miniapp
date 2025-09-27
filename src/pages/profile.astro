@@ -1,7 +1,7 @@
 ---
 // src/pages/profile.astro
 // This is the Profile page of our Mini App, now with correctly configured
-// client-side script loading using Astro.resolve().
+// client-side script loading using a relative path with client:load.
 
 // Define a type for the user data we expect from the API.
 interface UserData {
@@ -104,7 +104,7 @@ interface UserData {
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- CORRECTION: Use Astro.resolve() for the src attribute with type="module" and client:load -->
-    <script type="module" src={Astro.resolve('../scripts/profile.ts')} client:load></script>
+    <!-- CORRECTION: Use relative path for src attribute with type="module" and client:load -->
+    <script type="module" src="../scripts/profile.ts" client:load></script>
   </body>
 </html>
