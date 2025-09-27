@@ -43,6 +43,7 @@ async function authenticateUser() {
     const initData = WebApp.initData;
 
     if (!initData) {
+      // If initData is not available, it means the app isn't opened from Telegram.
       showStatus('Telegram initData not available. Please open the app from Telegram.', true);
       if (loaderElement) loaderElement.style.display = 'none';
       return;

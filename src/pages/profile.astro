@@ -1,7 +1,7 @@
 ---
 // src/pages/profile.astro
 // This is the Profile page of our Mini App, now with correctly configured
-// client-side script loading.
+// client-side script loading using Astro.resolve().
 
 // Define a type for the user data we expect from the API.
 interface UserData {
@@ -104,8 +104,7 @@ interface UserData {
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- THIS IS THE CORRECTION: Added `type="module"` and `client:load` -->
-    <!-- Astro will bundle and correctly reference this script only on the client. -->
-    <script type="module" src="../scripts/profile.ts" client:load></script>
+    <!-- CORRECTION: Use Astro.resolve() for the src attribute with type="module" and client:load -->
+    <script type="module" src={Astro.resolve('../scripts/profile.ts')} client:load></script>
   </body>
 </html>

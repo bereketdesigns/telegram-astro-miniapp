@@ -118,7 +118,7 @@ async function logoutUser(showConfirmation = true) {
 // THIS IS THE FINAL CORRECTION FOR THE TYPESCRIPT VOID ERROR:
 // We explicitly add `void` before `logoutUser()` to tell TypeScript to ignore the promise's return value.
 if (logoutButton) {
-  logoutButton.addEventListener('click', () => { // Keep this as a regular function
+  logoutButton.addEventListener('click', () => {
     void logoutUser(); // <-- Add `void` here
   });
 }
