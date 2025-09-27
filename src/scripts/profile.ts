@@ -99,8 +99,8 @@
       async function logoutUser(showConfirmation = true) {
         if (showConfirmation) {
           if (WebApp.showConfirm) {
-              const confirmed = await WebApp.showConfirm('Are you sure you want to log out?');
-              if (!confirmed) return;
+              const confirmedResult = await WebApp.showConfirm('Are you sure you want to log out?');
+              if (typeof confirmedResult === 'boolean' && !confirmedResult) return;
           } else if (!confirm('Are you sure you want to log out?')) {
               return;
           }
