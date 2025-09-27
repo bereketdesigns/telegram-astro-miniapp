@@ -1,12 +1,11 @@
 // src/scripts/home.ts
-// This script contains the client-side logic for the Home page of our Mini App.
-// It now conditionally loads the Telegram WebApp SDK to prevent SSR errors
-// and uses an IIFE to prevent variable redeclaration issues.
+// This script defines the client-side logic for the Home page.
+// It uses a dynamic import for the Telegram WebApp SDK to prevent SSR errors.
 
-// Wrap the entire script in an IIFE to create a private scope for its variables.
-(() => {
-  // Get references to our HTML elements (they must exist in index.astro)
-  // These are now block-scoped within the IIFE.
+// Export a default function that will be called when the script is loaded.
+// This encapsulates all logic and prevents global variable clashes.
+export default function initializeHomePage() {
+  // Get references to our HTML elements
   const statusElement = document.getElementById('status');
   const loaderElement = document.getElementById('loader');
   const userInfoElement = document.getElementById('user-info');
@@ -24,12 +23,9 @@
   // --- Dynamic Import and Initialization of Telegram WebApp SDK ---
   // This entire block only runs if `window` is defined (i.e., on the client-side).
   if (typeof window !== 'undefined') {
-    // Dynamically import WebApp. This prevents the SDK from being processed on the server.
     import('@twa-dev/sdk').then(({ default: WebApp }) => {
-      // Initialize the Telegram WebApp SDK.
       WebApp.ready();
 
-      // Apply Telegram's theme parameters to our page for a native look and feel.
       if (WebApp.themeParams) {
         document.documentElement.style.setProperty('--tg-theme-bg-color', WebApp.themeParams.bg_color || '#ffffff');
         document.documentElement.style.setProperty('--tg-theme-text-color', WebApp.themeParams.text_color || '#000000');
@@ -39,12 +35,10 @@
         document.documentElement.style.setProperty('--tg-theme-link-color', WebApp.themeParams.link_color || '#3498db');
         document.documentElement.style.setProperty('--tg-theme-hint-color', WebApp.themeParams.hint_color || '#808080');
       }
-      // Optionally, set the Telegram background for the app
       WebApp.setBackgroundColor(WebApp.themeParams.secondary_bg_color || '#f0f0f0');
 
       async function authenticateUser() {
         try {
-          // Get the `initData` from the Telegram WebApp SDK.
           const initData = WebApp.initData;
 
           if (!initData) {
@@ -57,9 +51,7 @@
 
           const response = await fetch('/api/auth', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData }),
           });
 
@@ -104,7 +96,6 @@
 
       authenticateUser();
     }).catch(error => {
-      // Handle potential errors if the SDK import itself fails
       showStatus('Failed to load Telegram WebApp SDK.', true);
       if (errorMessageElement) {
         errorMessageElement.textContent = `Error loading SDK: ${error.message}`;
@@ -114,9 +105,8 @@
       console.error('SDK import error:', error);
     });
   } else {
-    // Fallback for non-browser environments (like SSR)
     console.log('Running in SSR mode, skipping Telegram WebApp SDK initialization.');
     showStatus('Please open the app from Telegram.', true);
     if (loaderElement) loaderElement.style.display = 'none';
   }
-})(); // End of IIFE
+}

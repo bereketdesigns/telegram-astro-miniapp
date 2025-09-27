@@ -1,12 +1,11 @@
 // src/scripts/profile.ts
-// This script contains the client-side logic for the Profile page of our Mini App.
-// It now conditionally loads the Telegram WebApp SDK, prevents variable redeclaration,
+// This script defines the client-side logic for the Profile page.
+// It conditionally loads the Telegram WebApp SDK, prevents variable redeclaration,
 // and uses a robust async event handler for logout.
 
-// Wrap the entire script in an IIFE to create a private scope for its variables.
-(() => {
+// Export a default function that will be called when the script is loaded.
+export default function initializeProfilePage() {
   // Get references to our HTML elements
-  // These are now block-scoped within the IIFE.
   const loadingElement = document.getElementById('loading');
   const userProfileElement = document.getElementById('user-profile');
   const profilePhotoElement = document.getElementById('profile-photo');
@@ -17,19 +16,15 @@
   const errorMessageElement = document.getElementById('error-message');
 
   // --- Dynamic Import and Initialization of Telegram WebApp SDK ---
-  // This entire block only runs if `window` is defined (i.e., on the client-side).
   if (typeof window !== 'undefined') {
-    // Dynamically import WebApp.
     import('@twa-dev/sdk').then(({ default: WebApp }) => {
-      // Initialize Telegram WebApp SDK
       WebApp.ready();
 
-      // Apply Telegram's theme parameters, similar to the Home page
       if (WebApp.themeParams) {
         document.documentElement.style.setProperty('--tg-theme-bg-color', WebApp.themeParams.bg_color || '#ffffff');
         document.documentElement.style.setProperty('--tg-theme-text-color', WebApp.themeParams.text_color || '#000000');
         document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', WebApp.themeParams.secondary_bg_color || '#f0f0f0');
-        document.documentElement.style.setProperty('--tg-theme-button-color', WebApp.themeParams.button_color || '#dc3545'); // Use red for logout button by default
+        document.documentElement.style.setProperty('--tg-theme-button-color', WebApp.themeParams.button_color || '#dc3545');
         document.documentElement.style.setProperty('--tg-theme-button-text-color', WebApp.themeParams.button_text_color || '#ffffff');
         document.documentElement.style.setProperty('--tg-theme-link-color', WebApp.themeParams.link_color || '#3498db');
         document.documentElement.style.setProperty('--tg-theme-hint-color', WebApp.themeParams.hint_color || '#808080');
@@ -99,8 +94,8 @@
       async function logoutUser(showConfirmation = true) {
         if (showConfirmation) {
           if (WebApp.showConfirm) {
-              const confirmedResult = await WebApp.showConfirm('Are you sure you want to log out?');
-              if (typeof confirmedResult === 'boolean' && !confirmedResult) return;
+              await WebApp.showConfirm('Are you sure you want to log out?');
+              // Assume user confirms, as showConfirm does not return a value
           } else if (!confirm('Are you sure you want to log out?')) {
               return;
           }
@@ -122,9 +117,8 @@
         }
       }
 
-      // THIS IS THE CORRECTION for the void error, using an async callback
       if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
+        logoutButton.addEventListener('click', async () => { // Corrected: async callback
           await logoutUser();
         });
       }
@@ -132,7 +126,6 @@
       fetchUserProfile();
 
     }).catch(error => {
-      // Handle potential errors if the SDK import itself fails
       console.error('SDK import error on profile page:', error);
       if (errorMessageElement) {
         errorMessageElement.textContent = `Error loading Telegram WebApp SDK: ${error.message}.`;
@@ -141,7 +134,6 @@
       if (loadingElement) loadingElement.style.display = 'none';
     });
   } else {
-    // Fallback for non-browser environments (like SSR)
     console.log('Running in SSR mode, skipping Telegram WebApp SDK initialization for profile.');
     if (loadingElement) loadingElement.style.display = 'none';
     if (errorMessageElement) {
@@ -149,4 +141,4 @@
       errorMessageElement.style.display = 'block';
     }
   }
-})(); // End of IIFE
+}
