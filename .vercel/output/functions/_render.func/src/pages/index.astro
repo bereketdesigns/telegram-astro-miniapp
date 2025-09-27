@@ -1,8 +1,8 @@
 ---
 // src/pages/index.astro
 // This is the Home page of our Telegram Mini App.
-// Client-side scripts are now correctly configured using a relative path with client:load
-// for proper bundling and path generation in production, while avoiding SSR crashes.
+// Client-side scripts are configured using a relative path with client:load
+// for proper bundling and client-side execution only.
 
 // Define a type for the user data we expect from the API.
 interface UserData {
@@ -87,7 +87,7 @@ interface UserData {
       <div id="error-message" style="color: red; display: none;"></div>
     </div>
 
-    <!-- Load the client-side script as a module -->
-    <script type="module" src="../scripts/home.ts"></script>
+    <!-- CORRECTION: Use relative path for src attribute with type="module" and client:load -->
+    <script type="module" src="../scripts/home.ts" client:load></script>
   </body>
 </html>

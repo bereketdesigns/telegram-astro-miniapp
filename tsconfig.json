@@ -1,5 +1,13 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    // Remove 'outDir', 'rootDir', 'noEmit' specific to script compilation
+    // Astro's bundler will handle this based on your <script> tags.
+  }
+  // Remove the specific "include" for "src/scripts/**/*.ts"
+  // Astro's default "include": ["**/*"] will cover src/scripts.
 }
